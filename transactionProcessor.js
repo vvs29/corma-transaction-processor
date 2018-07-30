@@ -1,5 +1,7 @@
 var db = require('./db');
 var deposits = require('./models/deposits');
+var contributions = require('./models/contributions');
+var moment = require('moment');
 
 db.connect(null, function(err) {
     if (err) {
@@ -9,9 +11,6 @@ db.connect(null, function(err) {
         console.log('DEBUG::Connected to MySQL.');
     }
 });
-
-var depositQueryDone = false;
-var planQueryDone = false;
 
 function compareDeposits(a, b) {
     var aDate = new Date(a.deposit_date);
@@ -57,15 +56,52 @@ deposits.getUnprocessed(function(err, rows) {
             }
 
             if (rows.length != 1) {
-                console.log("ERROR::There should be exactly 1 active ontribution plan for a member. Found:" + rows.length);
+                console.log("ERROR::There should be exactly 1 active contribution plan for a member. Found:" + rows.length);
             }
 
-            var memberDeposits = memberDepositInfo.get(memberID);
-            memberDeposits.sort(compareDeposits);
+            var planID = rows[0].id;
+            var lastContributedDate = new Date(rows[0].activation_date);
+            // WARNING: assuming the deposits are for single plan id. Should deposit for new plan ID
+            // only after old deposit is processed and new plan id is activated
+            contributions.getForPlanID(planID, function (err, contributionData) {
+                if (contributionData.length > 0) {
+                    lastContributedDate = new Date(contributionData[0].contribution_date);
+                }
+                var memberDeposits = memberDepositInfo.get(memberID);
+                memberDeposits.sort(compareDeposits);
 
-            for (var i = 0; i < memberDeposits.length; i++) {
-
-            }
+                var depositStatus = {};
+                var contributionEntries = {};
+                var unprocessedAmount = 0;
+                var nTotalMonths = 0;
+                for (var i = 0; i < memberDeposits.length; i++) {
+                    var depositAmount = memberDeposits[i].amount;
+                    var plannedAmount = rows[0].monthlyContribution;
+                    unprocessedAmount += depositAmount;
+                    if (unprocessedAmount < plannedAmount) {
+                        continue;
+                    }
+                    var nMonthsForDeposit = Math.floor(unprocessedAmount/plannedAmount);
+                    nTotalMonths += nMonthsForDeposit;
+                    unprocessedAmount -= (nMonthsForDeposit * plannedAmount);
+                    for (var doneDepositIndex = 0; doneDepositIndex < i; doneDepositIndex++) {
+                        depositStatus[memberDeposits[doneDepositIndex].id] = 0;
+                    }
+                    depositStatus[memberDeposits[i].id] = unprocessedAmount;
+                    var contributionsDates;
+                }
+                for (var monthOffset = 0; monthOffset < nTotalMonths; monthOffset++) {
+                    var contributionDate = moment(lastContributedDate).add(monthOffset, 'months').format('YYYY-MM-DD');
+                    if (monthOffset == 0) {
+                        contributionsDates = [contributionDate];
+                    } else {
+                        contributionsDates.push(contributionDate);
+                    }
+                    contributionEntries[planID] = contributionsDates;
+                }
+                console.log("Deposit Status:" + JSON.stringify(depositStatus));
+                console.log("Contribution entries:" + JSON.stringify(contributionEntries));
+            });
         });
     });
     console.log("vijay3");

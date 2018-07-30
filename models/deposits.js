@@ -8,7 +8,7 @@ exports.getUnprocessed = function (done) {
 };
 
 exports.getPlanForMember = function (memberID, done) {
-    db.get().query("SELECT id, (amount / frequency) as monthlyContribution FROM contribution_plan where (deactivation_date is NULL or activation_date > deactivation_date) and member_id=" + memberID, function (err, rows) {
+    db.get().query("SELECT id, (amount / frequency) as monthlyContribution, activation_date FROM contribution_plan where (deactivation_date is NULL or activation_date > deactivation_date) and member_id=" + memberID, function (err, rows) {
         if (err) return done(err);
         done(null, rows)
     });
