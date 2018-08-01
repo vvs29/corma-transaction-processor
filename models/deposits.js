@@ -1,4 +1,5 @@
 var db = require('../db.js');
+var moment = require('moment');
 
 exports.getUnprocessed = function (done) {
     db.get().query("SELECT id, member_id, amount, DATE_FORMAT(date, '%Y-%m-%d') as deposit_date, processed_amount FROM deposits where type = 'REG' and (amount - processed_amount) > 0.0001 and member_id is not NULL and member_id != 0", function (err, rows) {
@@ -12,4 +13,16 @@ exports.getPlanForMember = function (memberID, done) {
         if (err) return done(err);
         done(null, rows)
     });
+};
+
+exports.updateStatus = function (depositStatus) {
+    var values = '';
+    var today = moment(new Date()).format('YYYY-MM-DD');
+    for (var depositID in depositStatus) {
+        var processedAmount = depositStatus[depositID];
+        var query = "update deposits set processed_amount = " + processedAmount + ", last_processed = '" + today + "' where id = " + depositID + ";";
+        db.get().query(query, function (err, rows) {
+            if (err) return console.log("ERROR::Failed to write to contributions table. Error was:" + err + " and query was:" + query);
+        });
+    }
 };

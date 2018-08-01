@@ -2,6 +2,7 @@ var db = require('./db');
 var deposits = require('./models/deposits');
 var contributions = require('./models/contributions');
 var moment = require('moment');
+var fs = require('fs');
 
 db.connect(null, function(err) {
     if (err) {
@@ -87,7 +88,7 @@ deposits.getUnprocessed(function(err, rows) {
                     for (var doneDepositIndex = 0; doneDepositIndex < i; doneDepositIndex++) {
                         depositStatus[memberDeposits[doneDepositIndex].id] = 0;
                     }
-                    depositStatus[memberDeposits[i].id] = unprocessedAmount;
+                    depositStatus[memberDeposits[i].id] = memberDeposits[i].amount - unprocessedAmount;
                     var contributionsDates;
                 }
                 for (var monthOffset = 0; monthOffset < nTotalMonths; monthOffset++) {
@@ -99,7 +100,9 @@ deposits.getUnprocessed(function(err, rows) {
                     }
                     contributionEntries[planID] = contributionsDates;
                 }
+                deposits.updateStatus(depositStatus);
                 console.log("Deposit Status:" + JSON.stringify(depositStatus));
+                contributions.updateContributions(contributionEntries);
                 console.log("Contribution entries:" + JSON.stringify(contributionEntries));
             });
         });
