@@ -41,7 +41,7 @@ exports.getContributionReport = function (done) {
 
 exports.getPreviousBalance = function (done) {
     var cutoffDate = getCutoffDate();
-    db.get().query("SELECT p.id as memberID, IFNULL(sum(c.plannedAmount), 0) as contributed, p.amount * TIMESTAMPDIFF(MONTH, p.activation_date, '" + cutoffDate + "') as planned from contributionReport c right outer join contribution_plan p on c.id = p.member_id where (c.date is null or (c.date < '" + cutoffDate + "' and c.date >= p.activation_date)) and '" + cutoffDate + "' > p.activation_date and (p.deactivation_date IS NULL or '" + cutoffDate + "' < deactivation_date) group by memberID", function (err, rows) {
+    db.get().query("SELECT p.member_id as memberID, IFNULL(sum(c.plannedAmount), 0) as contributed, p.amount * TIMESTAMPDIFF(MONTH, p.activation_date, '" + cutoffDate + "') as planned from contributionReport c right outer join contribution_plan p on c.id = p.member_id where (c.date is null or (c.date < '" + cutoffDate + "' and c.date >= p.activation_date)) and '" + cutoffDate + "' > p.activation_date and (p.deactivation_date IS NULL or '" + cutoffDate + "' < deactivation_date) group by memberID", function (err, rows) {
         if (err) return done(err);
         done(null, rows);
     });
