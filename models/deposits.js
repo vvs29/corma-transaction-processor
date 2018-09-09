@@ -2,7 +2,7 @@ var db = require('../db.js');
 var moment = require('moment');
 
 exports.getUnprocessed = function (done) {
-    db.get().query("SELECT id, member_id, amount, DATE_FORMAT(date, '%Y-%m-%d') as deposit_date, processed_amount FROM deposits where type = 'REG' and (amount - processed_amount) > 0.0001 and member_id is not NULL and member_id != 0", function (err, rows) {
+    db.get().query("SELECT id, member_id, (amount - processed_amount) as unprocessedAmount, DATE_FORMAT(date, '%Y-%m-%d') as deposit_date, processed_amount FROM deposits where type = 'REG' and (amount - processed_amount) > 0.0001 and member_id is not NULL and member_id != 0", function (err, rows) {
         if (err) return done(err);
         done(null, rows)
     });

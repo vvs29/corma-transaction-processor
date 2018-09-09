@@ -2,7 +2,6 @@ var db = require('./db');
 var deposits = require('./models/deposits');
 var contributions = require('./models/contributions');
 var moment = require('moment');
-var fs = require('fs');
 
 db.connect(null, function(err) {
     if (err) {
@@ -48,7 +47,6 @@ deposits.getUnprocessed(function(err, rows) {
 
     //var contributedIDs = memberDepositInfo.keys();
     var contributionPlans = new Map();
-    console.log("vijay1");
     memberDepositInfo.forEach(function (deposit, memberID) {
         deposits.getPlanForMember(memberID, function (err, rows) {
             if (err) {
@@ -61,7 +59,7 @@ deposits.getUnprocessed(function(err, rows) {
             }
 
             var planID = rows[0].id;
-            var lastContributedDate = new Date(rows[0].activation_date);
+            var lastContributedDate = moment(new Date(rows[0].activation_date)).add(-1, 'months').toDate();
             // WARNING: assuming the deposits are for single plan id. Should deposit for new plan ID
             // only after old deposit is processed and new plan id is activated
             contributions.getForPlanID(planID, function (err, contributionData) {
@@ -76,7 +74,7 @@ deposits.getUnprocessed(function(err, rows) {
                 var unprocessedAmount = 0;
                 var nTotalMonths = 0;
                 for (var i = 0; i < memberDeposits.length; i++) {
-                    var depositAmount = memberDeposits[i].amount;
+                    var depositAmount = memberDeposits[i].unprocessedAmount;
                     var plannedAmount = rows[0].monthlyContribution;
                     unprocessedAmount += depositAmount;
                     if (unprocessedAmount < plannedAmount) {
@@ -86,13 +84,13 @@ deposits.getUnprocessed(function(err, rows) {
                     nTotalMonths += nMonthsForDeposit;
                     unprocessedAmount -= (nMonthsForDeposit * plannedAmount);
                     for (var doneDepositIndex = 0; doneDepositIndex < i; doneDepositIndex++) {
-                        depositStatus[memberDeposits[doneDepositIndex].id] = 0;
+                        depositStatus[memberDeposits[doneDepositIndex].id] = memberDeposits[doneDepositIndex].processed_amount + memberDeposits[doneDepositIndex].unprocessedAmount;
                     }
-                    depositStatus[memberDeposits[i].id] = memberDeposits[i].amount - unprocessedAmount;
+                    depositStatus[memberDeposits[i].id] = depositAmount - unprocessedAmount;
                     var contributionsDates;
                 }
                 for (var monthOffset = 0; monthOffset < nTotalMonths; monthOffset++) {
-                    var contributionDate = moment(lastContributedDate).add(monthOffset, 'months').format('YYYY-MM-DD');
+                    var contributionDate = moment(lastContributedDate).add(monthOffset + 1, 'months').format('YYYY-MM-DD');
                     if (monthOffset == 0) {
                         contributionsDates = [contributionDate];
                     } else {
