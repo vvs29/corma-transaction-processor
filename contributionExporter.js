@@ -4,7 +4,7 @@ var contributions = require('./models/contributions');
 var moment = require('moment');
 var fs = require('fs');
 
-db.connect(null, function(err) {
+db.connect(db.MODE_TEST, function(err) {
     if (err) {
         console.log('ERROR::Unable to connect to MySQL.');
         process.exit(1);
@@ -25,10 +25,10 @@ var getValue = function(month, hash) {
 contributions.getContributionReport(function(err, report) {
     var reportHash = {};
     for (var i = 0; i < report.length; i++) {
-        if (reportHash[report[i].memberID] === undefined) {
-            reportHash[report[i].memberID] = {};
+        if (reportHash[report[i].id] === undefined) {
+            reportHash[report[i].id] = {};
         }
-        reportHash[report[i].memberID][moment(new Date(report[i].date)).format("M")] = report[i].plannedAmount;
+        reportHash[report[i].id][moment(new Date(report[i].date)).format("M")] = report[i].plannedAmount;
     }
     console.log("Deposit Status:" + JSON.stringify(reportHash));
 
