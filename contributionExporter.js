@@ -4,7 +4,9 @@ var contributions = require('./models/contributions');
 var moment = require('moment');
 var fs = require('fs');
 
-db.connect(db.MODE_TEST, function(err) {
+var cutoffDate = '2018-04-01'; // Change this when the FY changes. Eg: if FY is 2018-19, then set this to 2018-04-01
+
+db.connect(db.MODE_TEST, function (err) {
     if (err) {
         console.log('ERROR::Unable to connect to MySQL.');
         process.exit(1);
@@ -13,47 +15,86 @@ db.connect(db.MODE_TEST, function(err) {
     }
 });
 
-var getValue = function(month, hash) {
-    var value = hash[month];
-    if (value === null || value === undefined) {
-        return '0';
-    } else {
-        return value;
+var getValue = function (month, contributionReport, depositReport, balanceMonths, monthOffset) {
+    if (depositReport !== null && depositReport !== undefined && depositReport[month] !== null && depositReport[month] !== undefined) {
+        return depositReport[month];
     }
+    if (contributionReport !== null && contributionReport !== undefined && contributionReport[month] !== null && contributionReport[month] !== undefined) {
+        return '0';
+    }
+
+    var today = moment(new Date());
+    var dateToProcess = moment(new Date(cutoffDate)).add(monthOffset, 'months');
+    if (today.diff(dateToProcess, 'days') < 0) {
+        return '';
+    }
+    var diffMonths = today.diff(dateToProcess, 'months');
+    if (balanceMonths !== null && balanceMonths !== undefined && diffMonths >= 0) {
+        return 'p' + (balanceMonths - diffMonths);
+    }
+    return '';
 };
 
-contributions.getContributionReport(function(err, report) {
-    var reportHash = {};
+contributions.getContributionReport(function (err, report) {
+    var contributionReport = {};
     for (var i = 0; i < report.length; i++) {
-        if (reportHash[report[i].id] === undefined) {
-            reportHash[report[i].id] = {};
+        if (contributionReport[report[i].id] === undefined) {
+            contributionReport[report[i].id] = {};
         }
-        reportHash[report[i].id][moment(new Date(report[i].date)).format("M")] = report[i].plannedAmount;
+        contributionReport[report[i].id][moment(new Date(report[i].date)).format("M")] = report[i].plannedAmount;
     }
-    console.log("Deposit Status:" + JSON.stringify(reportHash));
+    console.log("Contribution Status:" + JSON.stringify(contributionReport));
 
-    var fd = fs.openSync('contributionReport_' + moment().format('YYYYMMDDHHmmss'), 'w');
-    fs.writeSync(fd, 'memberID,Apr,May,Jun,Jul,Aug,Sep,Oct,Nov,Dec,Jan,Feb,Mar\n');
 
-    for (var memberID in reportHash) {
-        var line = '' + memberID;
-        if (!reportHash.hasOwnProperty(memberID)) {
-            continue;
+    deposits.getDepositsReport(function (err, depositReportRaw) {
+        var depositReport = {};
+        for (var i = 0; i < depositReportRaw.length; i++) {
+            let memberId = depositReportRaw[i].member_id;
+            if (depositReport[memberId] === undefined) {
+                depositReport[memberId] = {};
+            }
+            let currMonth = moment(new Date(depositReportRaw[i].date)).format("M");
+            var amount = depositReport[memberId][currMonth];
+            if (amount === undefined) {
+                depositReport[memberId][currMonth] = depositReportRaw[i].amount;
+            } else {
+                depositReport[memberId][currMonth] = amount + depositReportRaw[i].amount;
+            }
         }
-        line += ',' + getValue('4', reportHash[memberID]);
-        line += ',' + getValue('5', reportHash[memberID]);
-        line += ',' + getValue('6', reportHash[memberID]);
-        line += ',' + getValue('7', reportHash[memberID]);
-        line += ',' + getValue('8', reportHash[memberID]);
-        line += ',' + getValue('9', reportHash[memberID]);
-        line += ',' + getValue('10', reportHash[memberID]);
-        line += ',' + getValue('11', reportHash[memberID]);
-        line += ',' + getValue('12', reportHash[memberID]);
-        line += ',' + getValue('1', reportHash[memberID]);
-        line += ',' + getValue('2', reportHash[memberID]);
-        line += ',' + getValue('3', reportHash[memberID]);
-        fs.writeSync(fd, line + '\n');
-    }
+        console.log("Deposit Status:" + JSON.stringify(depositReport));
 
-    fs.closeSync(fd);
+        contributions.getBalanceMonths(function (err, balanceMonthsRaw) {
+            var balanceMonths = {};
+            for (var i = 0; i < balanceMonthsRaw.length; i++) {
+                balanceMonths[balanceMonthsRaw[i].memberID] = balanceMonthsRaw[i].balanceMonths;
+            }
+            console.log("balance Status:" + JSON.stringify(balanceMonths));
+
+
+            var fd = fs.openSync('contributionReport_' + moment().format('YYYYMMDDHHmmss'), 'w');
+            fs.writeSync(fd, 'memberID,Apr,May,Jun,Jul,Aug,Sep,Oct,Nov,Dec,Jan,Feb,Mar\n');
+
+            for (var memberID in contributionReport) {
+                var line = '' + memberID;
+                if (!contributionReport.hasOwnProperty(memberID)) {
+                    continue;
+                }
+                line += ',' + getValue('4', contributionReport[memberID], depositReport[memberID], balanceMonths[memberID], 0);
+                line += ',' + getValue('5', contributionReport[memberID], depositReport[memberID], balanceMonths[memberID], 1);
+                line += ',' + getValue('6', contributionReport[memberID], depositReport[memberID], balanceMonths[memberID], 2);
+                line += ',' + getValue('7', contributionReport[memberID], depositReport[memberID], balanceMonths[memberID], 3);
+                line += ',' + getValue('8', contributionReport[memberID], depositReport[memberID], balanceMonths[memberID], 4);
+                line += ',' + getValue('9', contributionReport[memberID], depositReport[memberID], balanceMonths[memberID], 5);
+                line += ',' + getValue('10', contributionReport[memberID], depositReport[memberID], balanceMonths[memberID], 6);
+                line += ',' + getValue('11', contributionReport[memberID], depositReport[memberID], balanceMonths[memberID], 7);
+                line += ',' + getValue('12', contributionReport[memberID], depositReport[memberID], balanceMonths[memberID], 8);
+                line += ',' + getValue('1', contributionReport[memberID], depositReport[memberID], balanceMonths[memberID], 9);
+                line += ',' + getValue('2', contributionReport[memberID], depositReport[memberID], balanceMonths[memberID], 10);
+                line += ',' + getValue('3', contributionReport[memberID], depositReport[memberID], balanceMonths[memberID], 11);
+                fs.writeSync(fd, line + '\n');
+            }
+
+            fs.closeSync(fd);
+        });
+    });
 });

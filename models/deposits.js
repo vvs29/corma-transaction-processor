@@ -26,3 +26,11 @@ exports.updateStatus = function (depositStatus) {
         });
     }
 };
+
+exports.getDepositsReport = function (done) {
+    var today = moment(new Date()).format('YYYY-MM-DD');
+    db.get().query("SELECT id, member_id, amount, date from deposits where date >= '2018-04-01' and date <= '" + today + "' and member_id IS NOT NULL", function (err, rows) {
+        if (err) return done(err);
+        done(null, rows);
+    });
+};

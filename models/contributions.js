@@ -1,4 +1,5 @@
 var db = require('../db.js');
+var moment = require('moment');
 
 exports.getForPlanID = function (planID, done) {
     db.get().query("SELECT id, DATE_FORMAT(date, '%Y-%m-%d') as contribution_date FROM contributions where plan_id=" + planID + " order by date DESC limit 1", function (err, rows) {
@@ -39,9 +40,9 @@ exports.getContributionReport = function (done) {
     });
 };
 
-exports.getPreviousBalance = function (done) {
-    var cutoffDate = getCutoffDate();
-    db.get().query("SELECT p.member_id as memberID, IFNULL(sum(c.plannedAmount), 0) as contributed, p.amount * TIMESTAMPDIFF(MONTH, p.activation_date, '" + cutoffDate + "') as planned from contributionReport c right outer join contribution_plan p on c.id = p.member_id where (c.date is null or (c.date < '" + cutoffDate + "' and c.date >= p.activation_date)) and '" + cutoffDate + "' > p.activation_date and (p.deactivation_date IS NULL or '" + cutoffDate + "' < deactivation_date) group by memberID", function (err, rows) {
+exports.getBalanceMonths = function (done) {
+    var cutoffDate = moment(new Date()).format('YYYY-MM-DD');
+    db.get().query("SELECT p.member_id as memberID, TIMESTAMPDIFF(MONTH, p.activation_date, '" + cutoffDate + "') - count(c.date) + 1 as balanceMonths from contributionReport c right outer join contribution_plan p on c.id = p.member_id where (c.date is null or (c.date <= '" + cutoffDate + "' and c.date >= p.activation_date)) and '" + cutoffDate + "' > p.activation_date and (p.deactivation_date IS NULL or '" + cutoffDate + "' < deactivation_date) group by memberID", function (err, rows) {
         if (err) return done(err);
         done(null, rows);
     });
