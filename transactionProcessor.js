@@ -3,7 +3,7 @@ var deposits = require('./models/deposits');
 var contributions = require('./models/contributions');
 var moment = require('moment');
 
-db.connect(db.MODE_TEST, function(err) {
+db.connect(db.MODE_DEVELOPMENT, function(err) {
     if (err) {
         console.log('ERROR::Unable to connect to MySQL.');
         process.exit(1);

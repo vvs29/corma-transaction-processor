@@ -28,12 +28,13 @@ exports.updateContributions = function (contributionEntries) {
 };
 
 var getCutoffDate = function() {
-    var startYear = '2018'; // Change this when the FY changes. Eg: if FY is 2018-19, then set this to 2018
+    var startYear = '2019'; // Change this when the FY changes. Eg: if FY is 2018-19, then set this to 2018
     return startYear + "-04-01";
 };
 
 exports.getContributionReport = function (done) {
     var cutoffDate = getCutoffDate();
+    // var reportEndDate = moment(new Date(cutoffDate)).add(1, )
     db.get().query("SELECT * from contributionReport where date >= '" + cutoffDate + "'", function (err, rows) {
         if (err) return done(err);
         done(null, rows);

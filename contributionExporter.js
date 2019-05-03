@@ -4,9 +4,9 @@ var contributions = require('./models/contributions');
 var moment = require('moment');
 var fs = require('fs');
 
-var cutoffDate = '2018-04-01'; // Change this when the FY changes. Eg: if FY is 2018-19, then set this to 2018-04-01
+var cutoffDate = '2019-04-01'; // Change this when the FY changes. Eg: if FY is 2018-19, then set this to 2018-04-01
 
-db.connect(db.MODE_TEST, function (err) {
+db.connect(db.MODE_DEVELOPMENT, function (err) {
     if (err) {
         console.log('ERROR::Unable to connect to MySQL.');
         process.exit(1);
